@@ -28,32 +28,35 @@ jobs:
       run: |
         python - <<EOF
         import requests
-        import json
+        import csv
         import os
 
+        # API URL to fetch the Fear and Greed Index
         url = "https://api.alternative.me/fng/?limit=1"
         response = requests.get(url)
         data = response.json()
 
+        # Extract value and timestamp from the response
         value = data['data'][0]['value']
         timestamp = data['data'][0]['timestamp']
 
-        new_data = f"{timestamp},{value}"
+        # Prepare the new data as a list
+        new_data = [timestamp, value]
 
-        if os.path.exists('fear_and_greed.txt'):
-            with open('fear_and_greed.txt', 'r') as f:
-                old_data = f.read().strip()
-        else:
-            old_data = ""
+        # Define the CSV file name
+        csv_file = 'fear_and_greed.csv'
+        file_exists = os.path.isfile(csv_file)
 
-        if new_data != old_data:
-            with open('fear_and_greed.txt', 'w') as f:
-                f.write(new_data)
-            with open('output.txt', 'w') as f:
-                f.write("UPDATED")
-        else:
-            with open('output.txt', 'w') as f:
-                f.write("NO_UPDATE")
+        # Write data to the CSV file
+        with open(csv_file, mode='a', newline='') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(['timestamp', 'value'])  # Write header if the file is new
+            writer.writerow(new_data)  # Write the new data
+
+        # Create an output file to signal whether there was an update
+        with open('output.txt', 'w') as f:
+            f.write("UPDATED")
         EOF
 
     - name: Commit and push if changed
@@ -61,7 +64,7 @@ jobs:
         git config --global user.email "action@github.com"
         git config --global user.name "GitHub Action"
         if [[ $(cat output.txt) == "UPDATED" ]]; then
-          git add fear_and_greed.txt
+          git add fear_and_greed.csv
           git commit -m "Update Fear and Greed Index"
           git push
         fi
