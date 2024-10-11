@@ -1,0 +1,62 @@
+name: Update Fear and Greed Index
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Runs every hour
+  workflow_dispatch:  # Allows manual triggers
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+
+    - name: Fetch and update data
+      run: |
+        python - <<EOF
+        import requests
+        import json
+        import os
+
+        url = "https://api.alternative.me/fng/?limit=1"
+        response = requests.get(url)
+        data = response.json()
+
+        value = data['data'][0]['value']
+        timestamp = data['data'][0]['timestamp']
+
+        new_data = f"{timestamp},{value}"
+
+        if os.path.exists('fear_and_greed.txt'):
+            with open('fear_and_greed.txt', 'r') as f:
+                old_data = f.read().strip()
+        else:
+            old_data = ""
+
+        if new_data != old_data:
+            with open('fear_and_greed.txt', 'w') as f:
+                f.write(new_data)
+            print("UPDATED")
+        else:
+            print("NO_UPDATE")
+        EOF
+
+    - name: Commit and push if changed
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        if [[ $(python -c "print('UPDATED')") == "UPDATED" ]]; then
+          git add fear_and_greed.txt
+          git commit -m "Update Fear and Greed Index"
+          git push
+        fi
