@@ -46,16 +46,18 @@ jobs:
         if new_data != old_data:
             with open('fear_and_greed.txt', 'w') as f:
                 f.write(new_data)
-            print("UPDATED")
+            with open('output.txt', 'w') as f:
+                f.write("UPDATED")
         else:
-            print("NO_UPDATE")
+            with open('output.txt', 'w') as f:
+                f.write("NO_UPDATE")
         EOF
 
     - name: Commit and push if changed
       run: |
         git config --global user.email "action@github.com"
         git config --global user.name "GitHub Action"
-        if [[ $(python -c "print('UPDATED')") == "UPDATED" ]]; then
+        if [[ $(cat output.txt) == "UPDATED" ]]; then
           git add fear_and_greed.txt
           git commit -m "Update Fear and Greed Index"
           git push
